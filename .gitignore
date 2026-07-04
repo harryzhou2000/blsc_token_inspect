@@ -39,3 +39,6 @@ htmlcov/
 # Environment
 .env
 *.log
+
+# Cached Chart.js UMD download (downloaded on first export)
+chart.umd.min.js

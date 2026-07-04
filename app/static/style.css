@@ -310,6 +310,7 @@ body {
 
 /* === Dashboard === */
 .dashboard { animation: fadeUp 0.5s ease-out; }
+.dashboard-toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 8px; }
 
 /* === Summary Cards === */
 .summary-cards {

@@ -229,6 +229,35 @@
         });
     }
 
+    // --- Export HTML ---
+    function wireExportButton() {
+        const btn = document.getElementById('export-html-btn');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            if (!state.data) return;
+            try {
+                const res = await fetch('/api/export-html', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state.data),
+                });
+                if (!res.ok) throw new Error('Export failed: ' + res.status);
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'token-usage-report-' + new Date().toISOString().slice(0, 10) + '.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('Export failed:', e);
+                alert('Export failed: ' + e.message);
+            }
+        });
+    }
+
     // --- Render All ---
     function renderAll() {
         if (!state.data) return;
@@ -1121,4 +1150,5 @@
 
     // --- Init: fetch data file list, do NOT auto-load sample ---
     fetchDataFiles();
+    wireExportButton();
 })();
