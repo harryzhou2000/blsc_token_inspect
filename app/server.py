@@ -62,7 +62,7 @@ def api_data_files():
         return jsonify({"files": []})
     files = []
     for f in sorted(DATA_DIR.iterdir()):
-        if f.suffix.lower() in (".xlsx", ".xls"):
+        if f.suffix.lower() in (".xlsx", ".xls", ".csv"):
             files.append({"name": f.name, "size": f.stat().st_size})
     return jsonify({"files": files})
 
@@ -80,7 +80,7 @@ def api_merge_data_files():
 
     for name in filenames:
         fpath = DATA_DIR / name
-        if not fpath.exists() or fpath.suffix.lower() not in (".xlsx", ".xls"):
+        if not fpath.exists() or fpath.suffix.lower() not in (".xlsx", ".xls", ".csv"):
             errors.append({"file": name, "error": "File not found or unsupported type"})
             continue
         try:

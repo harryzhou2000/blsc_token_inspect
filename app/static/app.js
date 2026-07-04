@@ -173,7 +173,7 @@
     function renderDataFiles(files) {
         if (!dataFilesList) return;
         if (files.length === 0) {
-            dataFilesList.innerHTML = '<p class="data-files-empty">No .xlsx files in data/ folder</p>';
+            dataFilesList.innerHTML = '<p class="data-files-empty">No .xlsx or .csv files in data/ folder</p>';
             return;
         }
         dataFilesList.innerHTML = files.map((f) =>
