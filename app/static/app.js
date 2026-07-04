@@ -782,13 +782,13 @@
             const tokenCanvasId = 'chart-tokens-' + safeId;
             const costCanvasId = 'chart-cost-' + safeId;
             html += `<div class="resource-block">
-                <details open>
+                <details>
                     <summary><h3>${esc(name)}</h3></summary>
                     <details open>
                         <summary>Tokens by Model</summary>
                         <canvas id="${tokenCanvasId}"></canvas>
                     </details>
-                    <details open>
+                    <details>
                         <summary>Estimated Cost by Model</summary>
                         <canvas id="${costCanvasId}"></canvas>
                     </details>
@@ -958,13 +958,17 @@
                     });
                 }
             });
-            // Resize charts when a details panel opens/closes
+            // Resize charts when a details panel opens/closes (double-RAF for layout)
             container.querySelectorAll('details').forEach((d) => {
                 d.addEventListener('toggle', () => {
-                    Object.values(state.charts).forEach((chart) => {
-                        if (chart.canvas && d.contains(chart.canvas)) {
-                            chart.resize();
-                        }
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            Object.values(state.charts).forEach((chart) => {
+                                if (chart.canvas && d.contains(chart.canvas)) {
+                                    chart.resize();
+                                }
+                            });
+                        });
                     });
                 });
             });
