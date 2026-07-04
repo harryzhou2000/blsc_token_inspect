@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Session / tool state
+.slim/
+.codegraph/
+
+# Data files — keep directory, ignore contents
+data/*
+!data/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp scripts (root-level debug helpers)
+/_*.py
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+*.log

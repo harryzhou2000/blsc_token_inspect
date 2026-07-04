@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Usage Inspector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="app-header">
+            <div class="header-mark">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"/>
+                    <path d="M7 14l4-4 4 4 5-5"/>
+                </svg>
+            </div>
+            <h1>Token Usage Inspector</h1>
+            <p class="subtitle">Analyze token consumption across resources, models, and time.</p>
+        </header>
+
+        <section id="upload-section" class="upload-section">
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="upload-text">Drop your billing <code>.xlsx</code> file here</p>
+                <p class="upload-hint">or click to browse</p>
+                <button class="btn btn-secondary" id="load-sample">Load Sample Data</button>
+                <input type="file" id="file-input" accept=".xlsx,.xls" multiple hidden>
+            </div>
+            <div class="data-files-section" id="data-files-section">
+                <h3>Available Files</h3>
+                <span class="data-files-subtitle">from data/ folder</span>
+                <div id="data-files-list"></div>
+                <div class="load-actions">
+                    <button class="btn btn-secondary" id="load-selected" disabled>Load Selected</button>
+                </div>
+            </div>
+            <div class="upload-features">
+                <div class="feature"><span class="dot dot-violet"></span><span>Per-resource breakdown</span></div>
+                <div class="feature"><span class="dot dot-emerald"></span><span>Timeline trends</span></div>
+                <div class="feature"><span class="dot dot-amber"></span><span>Model distribution</span></div>
+                <div class="feature"><span class="dot dot-cyan"></span><span>Filterable records</span></div>
+            </div>
+        </section>
+
+        <section id="dashboard" class="dashboard hidden">
+            <div class="empty-state hidden" id="empty-state">
+                <p>Upload a billing file to get started</p>
+            </div>
+            <div class="summary-cards" id="summary-cards"></div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Cost by Resource</h2>
+                        <span class="chart-subtitle">Total spend per API key</span>
+                    </div>
+                    <div class="chart-toggle" id="toggle-cost-by-resource"></div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-cost-by-resource"></canvas></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Tokens by Resource</h2>
+                        <span class="chart-subtitle">Input / Output / Cache stacked</span>
+                    </div>
+                    <div class="chart-toggle" id="toggle-tokens-by-resource"></div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-tokens-by-resource"></canvas></div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Cost Timeline</h2>
+                        <span class="chart-subtitle">Daily spend per resource</span>
+                    </div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-timeline-cost"></canvas></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Tokens Timeline</h2>
+                        <span class="chart-subtitle">Daily token volume per resource</span>
+                    </div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-timeline-tokens"></canvas></div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Cost by Model</h2>
+                        <span class="chart-subtitle">Share of total spend</span>
+                    </div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-cost-by-model"></canvas></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Tokens by Model</h2>
+                        <span class="chart-subtitle">Token volume per model</span>
+                    </div>
+                    <div class="chart-canvas-wrap"><canvas id="chart-tokens-by-model"></canvas></div>
+                </div>
+            </div>
+
+            <section class="model-per-resource">
+                <div class="section-header">
+                    <h2>Model Breakdown by Resource</h2>
+                    <span class="section-subtitle">Drill into each resource's model mix</span>
+                </div>
+                <div id="model-per-resource"></div>
+            </section>
+
+            <section class="prices-section">
+                <div class="section-header">
+                    <h2>Estimated Prices by Model</h2>
+                    <span class="section-subtitle">Average ¥ per 1M tokens, derived via least-squares regression</span>
+                </div>
+                <div id="prices-container"></div>
+            </section>
+
+            <section class="table-section">
+                <div class="section-header">
+                    <h2>Record Details</h2>
+                    <span class="section-subtitle">Every billing entry, fully sortable</span>
+                </div>
+                <div class="table-controls">
+                    <div class="search-wrap">
+                        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" id="table-filter" placeholder="Filter records by date, resource, key, model…">
+                    </div>
+                    <span class="record-count" id="record-count"></span>
+                </div>
+                <div class="table-wrapper">
+                    <table id="data-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="date">Date</th>
+                                <th data-sort="resource_name">Resource</th>
+                                <th data-sort="resource_id">API Key</th>
+                                <th data-sort="model">Model</th>
+                                <th data-sort="tokens_input">Input</th>
+                                <th data-sort="tokens_output">Output</th>
+                                <th data-sort="tokens_cache_hit">Cache</th>
+                                <th data-sort="tokens_total">Total</th>
+                                <th data-sort="cost">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        <section id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Processing data…</p>
+        </section>
+
+        <section id="error" class="error hidden">
+            <div class="error-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <h3>Something went wrong</h3>
+            <p id="error-msg"></p>
+            <button class="btn btn-secondary" onclick="location.reload()">Try Again</button>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
