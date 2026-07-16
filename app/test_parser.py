@@ -10,7 +10,7 @@ _APP_DIR = Path(__file__).resolve().parent
 if str(_APP_DIR) not in sys.path:
     sys.path.insert(0, str(_APP_DIR))
 
-from parser import parse_xlsx
+from parser import parse_xlsx, parse_text
 
 # Sample data path: app/test_parser.py -> project root -> data/...
 PROJECT_ROOT = _APP_DIR.parent
@@ -159,6 +159,32 @@ class TestParser(unittest.TestCase):
         self.assertGreaterEqual(summary["date_count"], 1)
         # Verify token fields exist
         self.assertGreater(summary["tokens_total"], 0)
+
+    # test_text_file_parses (placed right after test_csv_extension_xlsx_parses)
+    def test_text_file_parses(self):
+        """Parse the plain-text billing dump format."""
+        text_file = PROJECT_ROOT / "data" / "data_20260701-v1.txt"
+        if not text_file.exists():
+            self.skipTest("text sample file not present")
+        result = parse_text(str(text_file))
+        self.assertNotIn("error", result, f"parse_text returned error: {result.get('error')}")
+        self.assertIn("records", result)
+        self.assertGreater(len(result["records"]), 0, "no records parsed from text file")
+        # Each record has the canonical shape
+        for r in result["records"]:
+            self.assertIn("date", r)
+            self.assertIn("resource_name", r)
+            self.assertIn("model", r)
+            self.assertIn("cost", r)
+            self.assertIn("tokens_input", r)
+            self.assertIn("tokens_output", r)
+            self.assertIn("tokens_cache_hit", r)
+            self.assertIn("tokens_total", r)
+        # Verify dedup worked: total records should be less than the raw line count / 3
+        # (file has ~2291 lines, but only ~700 unique records after dedup)
+        self.assertLess(len(result["records"]), 800, "text parser did not dedupe duplicate pages")
+        # Verify the cost sum is positive
+        self.assertGreater(result["summary"]["cost"], 0)
 
 
 if __name__ == "__main__":

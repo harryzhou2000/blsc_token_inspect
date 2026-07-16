@@ -31,6 +31,35 @@ TOKEN_TYPE_PATTERNS = [
     (re.compile(r"(输出|output)[:\s：]*([\d,]+)\s*tokens?", re.IGNORECASE), "output"),
 ]
 
+# --- Token-stream parser patterns (for plain-text billing dumps) ---
+# Each whitespace-separated token is classified into one of these categories.
+# Headers and trailers are naturally ignored: their tokens don't match any
+# structured pattern and fall through as unrecognized general strings.
+
+# Token-type prefix + count, e.g. "输入：308,574tokens" or "输出:100tokens"
+_TEXT_TOKEN_COUNT_RE = re.compile(
+    r'^(缓存输入|输入|输出)[：:]\s*([\d,]+)\s*tokens$'
+)
+# Tag + optional value, e.g. "名称：harry-opencode" or "模型：DeepSeek-V4-Pro"
+_TEXT_TAG_RE = re.compile(r'^(.+?)[：:](.*)$')
+# Date: "2026-07-16"
+_TEXT_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+# Time: "19:00:00"
+_TEXT_TIME_RE = re.compile(r'^\d{2}:\d{2}:\d{2}$')
+# Cost: decimal number like "3.70289" (must have decimal point to distinguish
+# from integer token-counts or other bare numbers)
+_TEXT_COST_RE = re.compile(r'^\d+\.\d+$')
+
+# Maps the Chinese token-type prefix to the canonical token type name
+_TEXT_TOKEN_TYPE_MAP = {
+    '缓存输入': 'cache_hit',
+    '输入': 'input',
+    '输出': 'output',
+}
+
+# Reverse map for building usage_desc strings
+_TEXT_TYPE_PREFIX_MAP = {v: k for k, v in _TEXT_TOKEN_TYPE_MAP.items()}
+
 
 def _parse_float(val) -> float:
     """Parse a value to float, handling strings with commas."""
@@ -358,6 +387,210 @@ def aggregate_records(records: list[dict], meta: dict | None = None) -> dict[str
         }
 
     return result
+
+
+def parse_text(filepath: str | Path) -> dict[str, Any]:
+    """Parse a plain-text billing dump using a robust token-stream approach.
+
+    The file is treated as a flat stream of whitespace-separated tokens. Each
+    token is classified in priority order:
+
+      1. Token-type + count  (e.g. "输入：308,574tokens"  or  "缓存输入:100tokens")
+      2. Tag + value          (e.g. "名称：harry-opencode"  or  "模型：GLM-5.2")
+      3. Date                 (e.g. "2026-07-16")
+      4. Time                 (e.g. "19:00:00"  — combines with preceding date)
+      5. Cost                 (decimal number, e.g. "3.70289")
+      6. General string        (everything else — headers, trailers, noise — ignored)
+
+    Section headers ("充值优惠", "资源ID账单", "明细账单", …), column headers
+    ("资源名称", "配置描述", …), and footers ("•••", "欢迎咨询") are never
+    matched explicitly — their tokens simply don't fit any structured pattern
+    and fall through as unrecognized noise.
+
+    A record is emitted when all six fields are present:
+    resource_name, model, token_type, token_count, timestamp, cost.
+    The "名称：" tag signals the start of a new record group and resets the
+    buffer, so malformed/incomplete groups are discarded rather than corrupting
+    the next record.  Duplicate records are deduplicated by full signature.
+    """
+    filepath = Path(filepath)
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Flatten to a stream of whitespace-separated tokens (spaces, tabs, newlines)
+    tokens = content.split()
+
+    # State machine buffer for the current record
+    cur = {
+        'resource_name': None,
+        'model': None,
+        'token_type': None,
+        'token_count': None,
+        'timestamp': None,
+        'cost': None,
+    }
+    pending_date = None      # date waiting for a time token to complete it
+    pending_tag = None       # tag whose value will arrive as the next general string
+
+    records = []
+    seen = set()             # dedup signatures
+
+    def reset():
+        """Discard the current buffer and start fresh."""
+        nonlocal pending_date, pending_tag
+        for k in cur:
+            cur[k] = None
+        pending_date = None
+        pending_tag = None
+
+    def try_emit():
+        """Emit the current record if all six fields are present, then reset."""
+        if all(v is not None for v in cur.values()):
+            sig = (
+                cur['resource_name'],
+                cur['model'],
+                cur['token_type'],
+                cur['token_count'],
+                cur['timestamp'],
+                cur['cost'],
+            )
+            if sig not in seen:
+                seen.add(sig)
+                token_count = cur['token_count']
+                token_type = cur['token_type']
+                type_prefix = _TEXT_TYPE_PREFIX_MAP.get(token_type, '')
+                usage_desc = f"{type_prefix}：{format(token_count, ',')}tokens"
+                date = cur['timestamp'][:10]
+                records.append({
+                    "date": date,
+                    "resource_name": cur['resource_name'],
+                    "resource_type": "",
+                    "resource_id": "",
+                    "billing_method": "",
+                    "model": cur['model'],
+                    "usage_desc": usage_desc,
+                    "site": "",
+                    "transaction_type": "",
+                    "service_fee": 0.0,
+                    "cost": cur['cost'],
+                    "tokens": [{"type": token_type, "tokens": token_count}],
+                    "tokens_input": token_count if token_type == "input" else 0,
+                    "tokens_output": token_count if token_type == "output" else 0,
+                    "tokens_cache_hit": token_count if token_type == "cache_hit" else 0,
+                    "tokens_total": token_count,
+                })
+            reset()
+
+    for tok in tokens:
+        # 1. Token-type + count (highest priority — has both type prefix and "tokens" suffix)
+        m = _TEXT_TOKEN_COUNT_RE.match(tok)
+        if m:
+            type_prefix = m.group(1)
+            token_type = _TEXT_TOKEN_TYPE_MAP.get(type_prefix)
+            if token_type:
+                try:
+                    token_count = int(m.group(2).replace(',', ''))
+                    cur['token_type'] = token_type
+                    cur['token_count'] = token_count
+                except ValueError:
+                    pass
+            pending_tag = None
+            continue
+
+        # 2. Tag + value  (e.g. "名称：harry-opencode", "模型：GLM-5.2")
+        m = _TEXT_TAG_RE.match(tok)
+        if m:
+            tag, value = m.group(1), m.group(2)
+            if tag == '名称':
+                # Start of a new record group — discard any incomplete state
+                reset()
+                if value:
+                    cur['resource_name'] = value
+                else:
+                    pending_tag = '名称'
+            elif tag == '模型':
+                if value:
+                    cur['model'] = value
+                else:
+                    pending_tag = '模型'
+            # Unknown tags (时间, 总支出, etc.) are silently ignored
+            continue
+
+        # 3. Date  (e.g. "2026-07-16")
+        if _TEXT_DATE_RE.match(tok):
+            # If a previous date never got a time, treat it as a bare timestamp
+            if pending_date and cur['timestamp'] is None:
+                cur['timestamp'] = pending_date
+            pending_date = tok
+            pending_tag = None
+            continue
+
+        # 4. Time  (e.g. "19:00:00") — combines with pending date into a timestamp
+        if _TEXT_TIME_RE.match(tok):
+            if pending_date:
+                cur['timestamp'] = f"{pending_date} {tok}"
+                pending_date = None
+            pending_tag = None
+            continue
+
+        # 5. Cost  (decimal number — must have "." to avoid matching bare integers)
+        if _TEXT_COST_RE.match(tok):
+            try:
+                cur['cost'] = float(tok)
+            except ValueError:
+                continue
+            # If we have a pending date but no timestamp, use the date alone
+            if cur['timestamp'] is None and pending_date:
+                cur['timestamp'] = pending_date
+                pending_date = None
+            try_emit()
+            continue
+
+        # 6. General string
+        # If a tag is waiting for its value, this token is the value
+        if pending_tag:
+            if pending_tag == '名称':
+                cur['resource_name'] = tok
+            elif pending_tag == '模型':
+                cur['model'] = tok
+            pending_tag = None
+        # Otherwise: unrecognized token (headers, trailers, noise) — ignored
+
+    if not records:
+        return {"error": "No records found in text file", "records": []}
+
+    return aggregate_records(records, meta={
+        "filename": filepath.name,
+        "format": "text",
+    })
+
+
+def parse_billing_file(filepath: str | Path) -> dict[str, Any]:
+    """Dispatcher: detect file format (xlsx vs plain text) and route to the right parser.
+
+    Detects by PK ZIP magic bytes (xlsx) vs anything else (text). If the file
+    has a known xlsx/xls extension, also treats it as xlsx.
+    """
+    filepath = Path(filepath)
+
+    # Fast-path by extension
+    if filepath.suffix.lower() in ('.txt',):
+        return parse_text(filepath)
+
+    # Sniff magic bytes
+    try:
+        with open(filepath, 'rb') as f:
+            header = f.read(4)
+        if header[:2] == b'PK':
+            return parse_xlsx(filepath)
+    except OSError:
+        pass
+
+    # Fallback: treat as text if extension is not a known xlsx variant
+    if filepath.suffix.lower() in ('.xlsx', '.xlsm', '.xltx', '.xltm', '.xls'):
+        return parse_xlsx(filepath)
+    return parse_text(filepath)
 
 
 if __name__ == "__main__":

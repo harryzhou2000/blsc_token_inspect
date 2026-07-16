@@ -10,7 +10,7 @@ from pathlib import Path
 
 from flask import Flask, request, jsonify, send_from_directory, Response
 
-from parser import parse_xlsx, aggregate_records
+from parser import parse_xlsx, aggregate_records, parse_billing_file
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
@@ -40,7 +40,7 @@ def api_upload():
         f.save(tmp.name)
 
     try:
-        result = parse_xlsx(tmp_path)
+        result = parse_billing_file(tmp_path)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     finally:
@@ -54,7 +54,7 @@ def api_sample():
     if not SAMPLE_PATH.exists():
         return jsonify({"error": "Sample file not found"}), 404
     try:
-        result = parse_xlsx(SAMPLE_PATH)
+        result = parse_billing_file(SAMPLE_PATH)
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     return jsonify(result)
@@ -67,7 +67,7 @@ def api_data_files():
         return jsonify({"files": []})
     files = []
     for f in sorted(DATA_DIR.iterdir()):
-        if f.suffix.lower() in (".xlsx", ".xls", ".csv"):
+        if f.suffix.lower() in (".xlsx", ".xls", ".csv", ".txt"):
             files.append({"name": f.name, "size": f.stat().st_size})
     return jsonify({"files": files})
 
@@ -85,11 +85,11 @@ def api_merge_data_files():
 
     for name in filenames:
         fpath = DATA_DIR / name
-        if not fpath.exists() or fpath.suffix.lower() not in (".xlsx", ".xls", ".csv"):
+        if not fpath.exists() or fpath.suffix.lower() not in (".xlsx", ".xls", ".csv", ".txt"):
             errors.append({"file": name, "error": "File not found or unsupported type"})
             continue
         try:
-            result = parse_xlsx(fpath)
+            result = parse_billing_file(fpath)
             if "records" in result:
                 all_records.extend(result["records"])
         except Exception as e:
@@ -135,7 +135,7 @@ def api_upload_multiple():
             tmp_path = tmp.name
             f.save(tmp.name)
         try:
-            result = parse_xlsx(tmp_path)
+            result = parse_billing_file(tmp_path)
             if "records" in result:
                 all_records.extend(result["records"])
         except Exception as e:
