@@ -179,8 +179,9 @@
         dataFilesList.innerHTML = files.map((f) =>
             `<label class="file-item">
                 <input type="checkbox" class="data-file-cb" value="${esc(f.name)}">
-                <span>${esc(f.name)}</span>
+                <span class="file-name">${esc(f.name)}</span>
                 <span class="file-size">${fmtFileSize(f.size)}</span>
+                <input type="text" class="data-file-label" placeholder="label (optional)" data-file="${esc(f.name)}">
             </label>`
         ).join('');
 
@@ -211,11 +212,16 @@
             setLoading(true);
             try {
                 const names = [];
-                checked.forEach((cb) => names.push(cb.value));
+                const labels = [];
+                checked.forEach((cb) => {
+                    names.push(cb.value);
+                    const labelInput = dataFilesList.querySelector(`.data-file-label[data-file="${cb.value.replace(/"/g, '\\"')}"]`);
+                    labels.push(labelInput ? labelInput.value.trim() : "");
+                });
                 const res = await fetch('/api/merge-data-files', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ files: names }),
+                    body: JSON.stringify({ files: names, labels: labels }),
                 });
                 if (!res.ok) throw new Error(`Server error: ${res.status}`);
                 const data = await res.json();

@@ -74,16 +74,25 @@ def api_data_files():
 
 @app.route("/api/merge-data-files", methods=["POST"])
 def api_merge_data_files():
-    """Accept a JSON list of filenames from data/, parse each, merge, re-aggregate."""
+    """Accept a JSON list of filenames from data/, parse each, merge, re-aggregate.
+
+    Optional `labels` array (parallel to `files`) prepends a per-file label to
+    each record's resource_name, e.g. label "Trial 1" + resource "harry-opencode"
+    becomes "Trial 1 / harry-opencode". Useful for cross-file comparison.
+    """
     body = request.get_json(silent=True) or {}
     filenames = body.get("files", [])
     if not filenames or not isinstance(filenames, list):
         return jsonify({"error": "Provide a JSON body with a 'files' array"}), 400
 
+    labels = body.get("labels", [])
+    if not isinstance(labels, list):
+        labels = []
+
     all_records = []
     errors = []
 
-    for name in filenames:
+    for idx, name in enumerate(filenames):
         fpath = DATA_DIR / name
         if not fpath.exists() or fpath.suffix.lower() not in (".xlsx", ".xls", ".csv", ".txt"):
             errors.append({"file": name, "error": "File not found or unsupported type"})
@@ -91,6 +100,13 @@ def api_merge_data_files():
         try:
             result = parse_billing_file(fpath)
             if "records" in result:
+                # Prepend per-file label to resource_name if a non-empty label
+                # was provided for this file. Parallel index into labels[].
+                label = labels[idx].strip() if idx < len(labels) and labels[idx] else ""
+                if label:
+                    for r in result["records"]:
+                        if r.get("resource_name"):
+                            r["resource_name"] = f"{label} / {r['resource_name']}"
                 all_records.extend(result["records"])
         except Exception as e:
             errors.append({"file": name, "error": str(e)})
@@ -100,6 +116,7 @@ def api_merge_data_files():
 
     merged = aggregate_records(all_records, meta={
         "filenames": filenames,
+        "labels": labels,
         "api_keys": [],
         "resource_names": [],
         "models": [],

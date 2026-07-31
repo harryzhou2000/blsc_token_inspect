@@ -250,6 +250,31 @@ body {
     color: var(--text-tertiary);
     font-size: 0.8rem;
 }
+.file-item .file-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.file-item .data-file-label {
+    width: 130px;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--surface-2);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.file-item .data-file-label:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    background: var(--surface);
+}
+.file-item .data-file-label::placeholder {
+    color: var(--text-tertiary);
+}
 .load-actions {
     margin-top: 10px;
     display: flex;
