@@ -276,6 +276,15 @@ def aggregate_records(records: list[dict], meta: dict | None = None) -> dict[str
         A dict with keys: meta, summary, records, by_key, by_resource_name, by_model,
         timeline, prices.
     """
+    # Normalize all record dates to YYYY-MM-DD so timeline aggregation
+    # buckets per day, not per hour. Records from the xlsx parser carry
+    # full timestamps like "2026-07-17 14:00:00" in the date field; without
+    # this normalization the timeline renders one bucket per hour.
+    for r in records:
+        d = r.get("date") or ""
+        if len(d) >= 10:
+            r["date"] = d[:10]
+
     api_keys = sorted(set(r["resource_id"] for r in records if r["resource_id"]))
     models = sorted(set(r["model"] for r in records if r["model"]))
     dates = sorted(set(r["date"] for r in records if r["date"]))
@@ -345,6 +354,19 @@ def aggregate_records(records: list[dict], meta: dict | None = None) -> dict[str
                     "tokens_cache_hit": sum(r["tokens_cache_hit"] for r in kdr),
                     "tokens_total": sum(r["tokens_total"] for r in kdr),
                     "cost": sum(r["cost"] for r in kdr),
+                }
+        # Also aggregate by resource_name so the timeline works when
+        # resource_id is absent (e.g. plain-text parser output).
+        entry["by_resource_name"] = {}
+        for name in resource_names:
+            ndr = [r for r in dr if r["resource_name"] == name]
+            if ndr:
+                entry["by_resource_name"][name] = {
+                    "tokens_input": sum(r["tokens_input"] for r in ndr),
+                    "tokens_output": sum(r["tokens_output"] for r in ndr),
+                    "tokens_cache_hit": sum(r["tokens_cache_hit"] for r in ndr),
+                    "tokens_total": sum(r["tokens_total"] for r in ndr),
+                    "cost": sum(r["cost"] for r in ndr),
                 }
         timeline[date] = entry
 

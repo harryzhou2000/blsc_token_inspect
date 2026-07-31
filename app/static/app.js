@@ -407,9 +407,11 @@
             const dayCosts = {};
             const dayTokens = {};
             allResourceNames.forEach((name) => { dayCosts[name] = 0; dayTokens[name] = 0; });
-            // Add data from by_key entries, mapped to resource_name
-            Object.entries(dayEntry.by_key).forEach(([keyId, keyData]) => {
-                const rName = idToName[keyId];
+            // Add data from by_resource_name entries (fall back to by_key + idToName
+            // for older data that only has resource_id-keyed timeline entries).
+            const dayBreakdown = dayEntry.by_resource_name || dayEntry.by_key;
+            Object.entries(dayBreakdown).forEach(([keyId, keyData]) => {
+                const rName = dayEntry.by_resource_name ? keyId : (idToName[keyId] || keyId);
                 if (rName) {
                     dayCosts[rName] = (dayCosts[rName] || 0) + keyData.cost;
                     dayTokens[rName] = (dayTokens[rName] || 0) + keyData.tokens_total;
