@@ -1,0 +1,90 @@
+{
+  "BLSC": {
+    "adapter": "openai-chat",
+    "baseUrl": "https://llmapi.blsc.cn",
+    "allowPrivateNetwork": false,
+    "authMode": "key",
+    "apiKeyPool": [
+      {
+        "id": "39e636bc",
+        "key": "<REDACTED>",
+        "addedAt": 1785505843036
+      }
+    ],
+    "apiKey": "<REDACTED>",
+    "liveModels": false,
+    "modelReasoningEffortMap": {
+      "GLM-5.2": {
+        "low": "high",
+        "medium": "high",
+        "high": "high",
+        "xhigh": "max",
+        "max": "max"
+      },
+      "DeepSeek-V4-Flash": {
+        "low": "high",
+        "medium": "high",
+        "high": "high",
+        "xhigh": "max",
+        "max": "max"
+      },
+      "DeepSeek-V4-Pro": {
+        "low": "high",
+        "medium": "high",
+        "high": "high",
+        "xhigh": "max",
+        "max": "max"
+      },
+      "Kimi-K3": {
+        "none": "none",
+        "low": "low",
+        "medium": "high",
+        "high": "high",
+        "xhigh": "max",
+        "max": "max"
+      }
+    },
+    "modelReasoningEfforts": {
+      "Kimi-K3": [
+        "low",
+        "high",
+        "max"
+      ],
+      "Kimi-K2.6": [],
+      "Kimi-K2.5": []
+    },
+    "modelDefaultReasoningEfforts": {
+      "Kimi-K3": "max"
+    },
+    "models": [
+      "DeepSeek-V4-Flash",
+      "DeepSeek-V4-Pro",
+      "GLM-5.2",
+      "Kimi-K2.6",
+      "Kimi-K3",
+      "MiniMax-M3",
+      "Qwen3.6-Plus",
+      "Qwen3.7-Max"
+    ],
+    "modelContextWindows": {
+      "DeepSeek-V4-Pro": 1000000,
+      "DeepSeek-V4-Flash": 1000000,
+      "GLM-5.2": 1000000,
+      "Qwen3.7-Max": 1000000,
+      "MiniMax-M3": 1000000,
+      "Qwen3.6-Plus": 1000000,
+      "Kimi-K3": 1000000,
+      "Kimi-K2.6": 256000
+    },
+    "preserveReasoningContentModels": [
+      "DeepSeek-V4-Flash",
+      "DeepSeek-V4-Pro",
+      "GLM-5.2",
+      "Kimi-K2.6",
+      "Kimi-K3",
+      "MiniMax-M3",
+      "Qwen3.6-Plus",
+      "Qwen3.7-Max"
+    ]
+  }
+}

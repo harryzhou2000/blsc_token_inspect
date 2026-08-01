@@ -1,0 +1,191 @@
+{
+  "blsc": {
+    "npm": "@ai-sdk/openai-compatible",
+    "name": "BLSC",
+    "options": {
+      "baseURL": "https://llmapi.blsc.cn/v1"
+    },
+    "models": {
+      "DeepSeek-V4-Pro": {
+        "name": "DeepSeek V4 Pro",
+        "reasoning": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 1.71,
+          "output": 3.43,
+          "cache_read": 0.14
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 384000
+        }
+      },
+      "DeepSeek-V4-Flash": {
+        "name": "DeepSeek V4 Flash",
+        "reasoning": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 0.14,
+          "output": 0.29,
+          "cache_read": 0.03
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        }
+      },
+      "GLM-5.2": {
+        "name": "GLM-5.2",
+        "reasoning": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 1.14,
+          "output": 4,
+          "cache_read": 0.29
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        }
+      },
+      "Qwen3.7-Max": {
+        "name": "Qwen3.7-Max",
+        "reasoning": true,
+        "cost": {
+          "input": 1.71,
+          "output": 5.14,
+          "cache_read": 0.34
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        }
+      },
+      "MiniMax-M3": {
+        "name": "MiniMax-M3",
+        "reasoning": true,
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 0.6,
+          "output": 2.4,
+          "cache_read": 0.12
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        }
+      },
+      "Kimi-K2.6": {
+        "name": "Kimi-K2.6",
+        "reasoning": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 0.93,
+          "output": 3.86,
+          "cache_read": 0.19
+        },
+        "limit": {
+          "context": 256000,
+          "output": 128000
+        }
+      },
+      "Kimi-K3": {
+        "name": "Kimi K3",
+        "reasoning": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "modalities": {
+          "input": [
+            "text",
+            "image",
+            "video"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 3,
+          "output": 15,
+          "cache_read": 0.3
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 131072
+        }
+      },
+      "Qwen3.6-Plus": {
+        "name": "Qwen3.6-Plus",
+        "reasoning": true,
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "cost": {
+          "input": 0.57,
+          "output": 3.43,
+          "cache_read": 0.06
+        },
+        "limit": {
+          "context": 1000000,
+          "output": 128000
+        }
+      }
+    }
+  }
+}
